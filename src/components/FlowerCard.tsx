@@ -58,6 +58,7 @@ export function FlowerCard({ flower, preview = false }: Props) {
       ].join(' ')}
     >
       <TrimmedFlowerImage
+        key={flower.imagePath}
         src={flower.imagePath}
         alt={flower.name}
         displayHeightPx={preview ? 80 : shelfHeightPx}

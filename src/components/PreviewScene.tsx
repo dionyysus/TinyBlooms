@@ -38,10 +38,13 @@ function BouquetOnlyStack({
   wrapperId,
   bouquet,
   layoutInstant = false,
+  prioritizeFlowers = false,
 }: {
   wrapperId: WrapperId
   bouquet: PlacedFlower[]
   layoutInstant?: boolean
+  /** Shared viewer: fetch key blooms sooner for faster LCP. */
+  prioritizeFlowers?: boolean
 }) {
   const atRest = { opacity: 1, y: 0, scale: 1 }
   const enter = layoutInstant ? atRest : { opacity: 0, y: 8, scale: 0.97 }
@@ -67,7 +70,7 @@ function BouquetOnlyStack({
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-[10]">
-        {bouquet.map((p) => {
+        {bouquet.map((p, i) => {
           const meta = FLOWERS_BY_ID[p.flowerId]
           if (!meta) return null
           return (
@@ -86,10 +89,14 @@ function BouquetOnlyStack({
               }}
             >
               <TrimmedFlowerImage
+                key={meta.imagePath}
                 src={meta.imagePath}
                 alt={meta.name}
                 displayHeightPx={88}
                 fallbackImgClassName="h-[88px] w-auto object-contain"
+                fetchPriority={
+                  prioritizeFlowers && i < 4 ? 'high' : undefined
+                }
               />
             </div>
           )
@@ -257,7 +264,11 @@ export function PreviewScene({
               className="absolute left-0 right-0 top-0"
               style={{ height: BOUQUET_SCENE_H }}
             >
-              <BouquetOnlyStack wrapperId={wrapperId} bouquet={bouquet} />
+              <BouquetOnlyStack
+                wrapperId={wrapperId}
+                bouquet={bouquet}
+                prioritizeFlowers={embedded}
+              />
             </div>
           </div>
         )}

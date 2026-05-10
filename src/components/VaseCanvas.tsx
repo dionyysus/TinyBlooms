@@ -601,6 +601,7 @@ function BouquetLayer({
                 />
               ) : null}
               <TrimmedFlowerImage
+                key={meta.imagePath}
                 src={meta.imagePath}
                 alt={meta.name}
                 displayHeightPx={88}

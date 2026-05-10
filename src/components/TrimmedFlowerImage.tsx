@@ -13,6 +13,8 @@ type Props = {
   fallbackImgClassName: string
   /** Optional wrapper classes appended to the cropped container. */
   wrapperClassName?: string
+  /** Hint for LCP when this image is above the fold (e.g. shared viewer). */
+  fetchPriority?: 'high' | 'low' | 'auto'
 }
 
 function isNontrivialTrim(b: TrimmedImageBoundsResult) {
@@ -35,12 +37,12 @@ export function TrimmedFlowerImage({
   displayHeightPx,
   fallbackImgClassName,
   wrapperClassName = '',
+  fetchPriority,
 }: Props) {
   const [bounds, setBounds] = useState<TrimmedImageBoundsResult | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    setBounds(null)
     void (async () => {
       try {
         const b = await getTrimmedImageBounds(src)
@@ -69,6 +71,7 @@ export function TrimmedFlowerImage({
         className={fallbackImgClassName}
         draggable={false}
         decoding="async"
+        fetchPriority={fetchPriority}
       />
     )
   }
@@ -88,6 +91,7 @@ export function TrimmedFlowerImage({
         alt={alt}
         draggable={false}
         decoding="async"
+        fetchPriority={fetchPriority}
         className="pointer-events-none max-w-none select-none"
         style={{
           position: 'absolute',

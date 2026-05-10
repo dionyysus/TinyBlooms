@@ -101,38 +101,6 @@ export function deserializeShareState(encoded: string): ShareableBouquetState | 
   }
 }
 
-/**
- * Reads a share payload from `?s=` or `#s=` (fragment after `#` must be `s=<payload>`).
- */
-export function getSharePayloadFromLocation(): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const url = new URL(window.location.href)
-    const fromQuery = url.searchParams.get('s')
-    if (fromQuery && fromQuery.trim()) return fromQuery.trim()
-
-    const { hash } = window.location
-    if (hash.length <= 1) return null
-    const raw = hash.startsWith('#') ? hash.slice(1) : hash
-    if (raw.startsWith('s=')) {
-      return raw.slice(2)
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-/** Viewer-only mode: no chrome, only bouquet + envelope (see `buildShareUrl(..., { embed: true })`). */
-export function getEmbedModeFromLocation(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return new URL(window.location.href).searchParams.get('embed') === '1'
-  } catch {
-    return false
-  }
-}
-
 export type BuildShareUrlOptions = {
   /** When true, opens in viewer-only layout (query `embed=1`). */
   embed?: boolean
@@ -168,3 +136,8 @@ export function buildShareUrl(serialized: string, opts?: BuildShareUrlOptions): 
   }
   return `${base}#s=${serialized}`
 }
+
+export {
+  getEmbedModeFromLocation,
+  getSharePayloadFromLocation,
+} from './shareUrlParams'
