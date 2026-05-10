@@ -91,7 +91,6 @@ function clamp(n: number, min: number, max: number) {
 }
 
 const BLOOM_SCALE_MIN = 0.3
-const BLOOM_SCALE_STEP = 0.08
 const BLOOM_ROTATE_STEP = 15
 
 /** Mild variation; scale stays ~1 with slight shrink when the bouquet is crowded. */
@@ -188,11 +187,6 @@ export function BouquetBuilder() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const selectedPlaced = useMemo(
-    () => bouquet.find((b) => b.instanceId === selectedInstanceId) ?? null,
-    [bouquet, selectedInstanceId],
-  )
-
   function handleMoveBloom(instanceId: string, xPct: number, yPct: number) {
     const c = clampPlacementPercent(xPct, yPct)
     setBouquet((prev) =>
@@ -207,6 +201,11 @@ export function BouquetBuilder() {
     setBouquet((prev) =>
       prev.map((p) => (p.instanceId === instanceId ? { ...p, scale: s } : p)),
     )
+  }
+
+  function handleRemoveBloom(instanceId: string) {
+    setBouquet((prev) => prev.filter((b) => b.instanceId !== instanceId))
+    setSelectedInstanceId((id) => (id === instanceId ? null : id))
   }
 
   function handleRotateBloom(instanceId: string, rotation: number) {
@@ -365,8 +364,8 @@ export function BouquetBuilder() {
                     Tiny Blooms
                   </h1>
                   <p className="mt-2 max-w-md text-[13px] leading-relaxed text-ink-500">
-                    Drag blooms onto the wrapper. Adjust scale when one is
-                    selected.
+                    Drag blooms onto the wrapper. Tap one to nudge it; × removes
+                    it, and the two buttons under the bloom rotate or resize.
                   </p>
                 </div>
 
@@ -379,11 +378,12 @@ export function BouquetBuilder() {
                   <VaseCanvas
                     wrapperId={selectedWrapper.id}
                     bouquet={bouquet}
-                    selectedInstanceId={selectedPlaced?.instanceId ?? null}
+                    selectedInstanceId={selectedInstanceId}
                     onSelectBloom={setSelectedInstanceId}
                     onMoveBloom={handleMoveBloom}
                     onScaleBloom={handleScaleBloom}
                     onRotateBloom={handleRotateBloom}
+                    onRemoveBloom={handleRemoveBloom}
                     onBloomPlacementRef={(el) => {
                       bloomPlacementElRef.current = el
                     }}
@@ -401,86 +401,6 @@ export function BouquetBuilder() {
                     onNext={() => setStep('letter')}
                     position="viewport"
                   />
-
-                  {selectedPlaced ? (
-                    <div
-                      className="pointer-events-auto fixed bottom-[min(12rem,calc(env(safe-area-inset-bottom,0px)_+_8rem))] right-5 z-[52] flex items-stretch divide-x divide-cream-200/55 rounded-md border border-cream-200/45 bg-cream-50/95 text-ink-500 shadow-soft backdrop-blur-[6px] sm:right-8"
-                      role="toolbar"
-                      aria-label="Resize and rotate selected bloom"
-                    >
-                      <span className="hidden items-center px-3 py-2 text-[10px] font-medium tracking-[0.16em] text-ink-500 sm:flex">
-                        Size
-                      </span>
-                      <div className="flex items-center gap-0 px-1 py-1 sm:px-1.5">
-                        <button
-                          type="button"
-                          className="flex h-10 w-10 items-center justify-center rounded-sm text-base font-light text-ink-500 transition-colors hover:bg-cream-100/80 hover:text-ink-900 active:scale-[0.97]"
-                          aria-label="Make bloom smaller"
-                          onClick={() =>
-                            handleScaleBloom(
-                              selectedPlaced.instanceId,
-                              selectedPlaced.scale - BLOOM_SCALE_STEP,
-                            )
-                          }
-                        >
-                          −
-                        </button>
-                        <span className="min-w-[3rem] px-1 text-center text-[11px] tabular-nums text-ink-500">
-                          {Math.round(selectedPlaced.scale * 100)}%
-                        </span>
-                        <button
-                          type="button"
-                          className="flex h-10 w-10 items-center justify-center rounded-sm text-base font-light text-ink-500 transition-colors hover:bg-cream-100/80 hover:text-ink-900 active:scale-[0.97]"
-                          aria-label="Make bloom larger"
-                          onClick={() =>
-                            handleScaleBloom(
-                              selectedPlaced.instanceId,
-                              selectedPlaced.scale + BLOOM_SCALE_STEP,
-                            )
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
-                      <span className="hidden items-center px-3 py-2 text-[10px] font-medium tracking-[0.16em] text-ink-500 sm:flex">
-                        Rotate
-                      </span>
-                      <div className="flex items-center gap-0 px-1 py-1 sm:px-1.5">
-                        <button
-                          type="button"
-                          className="flex h-10 w-10 items-center justify-center rounded-sm text-base text-ink-500 transition-colors hover:bg-cream-100/80 hover:text-ink-900 active:scale-[0.97]"
-                          aria-label="Rotate bloom left 15 degrees"
-                          onClick={() =>
-                            handleRotateBloom(
-                              selectedPlaced.instanceId,
-                              selectedPlaced.rotation - BLOOM_ROTATE_STEP,
-                            )
-                          }
-                        >
-                          ↺
-                        </button>
-                        <span className="min-w-[2.8rem] px-1 text-center text-[11px] tabular-nums text-ink-500">
-                          {Math.round(selectedPlaced.rotation)}°
-                        </span>
-                        <button
-                          type="button"
-                          className="flex h-10 w-10 items-center justify-center rounded-sm text-base text-ink-500 transition-colors hover:bg-cream-100/80 hover:text-ink-900 active:scale-[0.97]"
-                          aria-label="Rotate bloom right 15 degrees"
-                          onClick={() =>
-                            handleRotateBloom(
-                              selectedPlaced.instanceId,
-                              selectedPlaced.rotation + BLOOM_ROTATE_STEP,
-                            )
-                          }
-                        >
-                          ↻
-                        </button>
-                      </div>
-                      <span className="hidden max-w-[9.5rem] items-center px-3 py-2 text-[10px] leading-snug text-ink-500 xl:flex">
-                        Shift+scroll · [ ] to rotate
-                      </span>
-                    </div>
-                  ) : null}
                 </motion.article>
               </motion.div>
 
