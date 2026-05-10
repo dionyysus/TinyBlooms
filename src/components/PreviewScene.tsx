@@ -3,6 +3,7 @@ import { useEffect, useState, type RefObject } from 'react'
 import { FLOWERS_BY_ID } from '../data/flowers'
 import type { PlacedFlower, WrapperId } from '../types/bouquet'
 import { BOUQUET_SCENE_H, WRAPPER_H } from '../utils/bouquetSceneSize'
+import { wrapperDisplayWidthPx } from '../utils/wrapperSvg'
 import { Envelope } from './Envelope'
 import { TrimmedFlowerImage } from './TrimmedFlowerImage'
 import { WrapperRender } from './WrapperRender'
@@ -14,20 +15,105 @@ type Props = {
   letterCardColor: string
   onEditMessage: () => void
   onEditBouquet: () => void
-  /** Captures wrapper + blooms (read-only bouquet stack) as PNG via html-to-image. */
+  /** Captures soft backdrop + envelope + bouquet as PNG. */
   bouquetCaptureRef: RefObject<HTMLDivElement | null>
+  /** While true, switches to a download-only side-by-side layout and captures. */
+  isCapturingPreview?: boolean
   onDownloadImage: () => void
   onCopyShareLink: () => void | Promise<void>
 }
 
-/** how many px of the envelope peek below the bouquet */
+/** how many px of the envelope peek below the bouquet (stacked preview only) */
 const CARD_PEEK = 72
 
+/** Match wrapper art width + room for blooms; keeps download row tight and centered. */
+function downloadBouquetColumnWidthPx(): number {
+  const w = Math.round(wrapperDisplayWidthPx(WRAPPER_H) + 96)
+  return Math.min(360, Math.max(268, w))
+}
+
+function BouquetOnlyStack({
+  wrapperId,
+  bouquet,
+  layoutInstant = false,
+}: {
+  wrapperId: WrapperId
+  bouquet: PlacedFlower[]
+  layoutInstant?: boolean
+}) {
+  const atRest = { opacity: 1, y: 0, scale: 1 }
+  const enter = layoutInstant ? atRest : { opacity: 0, y: 8, scale: 0.97 }
+  const exit = layoutInstant ? atRest : { opacity: 0, y: -6, scale: 0.98 }
+  const transition = layoutInstant
+    ? { duration: 0 }
+    : { type: 'spring' as const, stiffness: 320, damping: 28 }
+
+  return (
+    <>
+      <div className="pointer-events-none absolute inset-0 z-[2] flex flex-col items-center justify-end">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={wrapperId}
+            initial={enter}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={exit}
+            transition={transition}
+          >
+            <WrapperRender layer="back" wrapperId={wrapperId} height={WRAPPER_H} />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="pointer-events-none absolute inset-0 z-[10]">
+        {bouquet.map((p) => {
+          const meta = FLOWERS_BY_ID[p.flowerId]
+          if (!meta) return null
+          return (
+            <div
+              key={p.instanceId}
+              aria-hidden
+              className="absolute select-none"
+              style={{
+                left: `${p.xPct}%`,
+                top: `${p.yPct}%`,
+                padding: '6px',
+                transform: `translate(-50%, -50%) rotate(${p.rotation}deg) scale(${p.scale})`,
+                transformOrigin: '50% 50%',
+                filter:
+                  'drop-shadow(0 5px 7px rgba(42,34,27,0.12)) drop-shadow(0 1px 1px rgba(42,34,27,0.08))',
+              }}
+            >
+              <TrimmedFlowerImage
+                src={meta.imagePath}
+                alt={meta.name}
+                displayHeightPx={88}
+                fallbackImgClassName="h-[88px] w-auto object-contain"
+              />
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="pointer-events-none absolute inset-0 z-[20] flex flex-col items-center justify-end">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={wrapperId}
+            initial={enter}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={exit}
+            transition={transition}
+          >
+            <WrapperRender layer="front" wrapperId={wrapperId} height={WRAPPER_H} />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </>
+  )
+}
+
 /**
- * Preview step — the real bouquet (wrapper-back → blooms → wrapper-front) is
- * displayed read-only. Wrapper sits at the bottom (z-[2]); blooms float
- * above it (z-[10]), naturally emerging from the wrap opening. The envelope
- * tucks behind (z-[1]) and flips to z-[30] when clicked.
+ * Preview step — stacked layout: envelope peeks under bouquet (interactive).
+ * Download: temporary side-by-side artboard (open envelope beside bouquet).
  */
 export function PreviewScene({
   wrapperId,
@@ -37,6 +123,7 @@ export function PreviewScene({
   onEditMessage,
   onEditBouquet,
   bouquetCaptureRef,
+  isCapturingPreview = false,
   onDownloadImage,
   onCopyShareLink,
 }: Props) {
@@ -53,131 +140,120 @@ export function PreviewScene({
 
   return (
     <div className="flex w-full shrink-0 flex-col px-6 py-10 sm:px-8 sm:py-12">
-      {/*
-        Cluster: full width of card — % bloom offsets match studio for the same width.
-        Total height = SCENE_HEIGHT (bouquet) + CARD_PEEK (visible card strip).
-        z-order: letter card z-[1], wrapper z-[2], blooms z-[10], card-open z-[30].
-      */}
-      <div
-        className="relative w-full min-w-0"
+      <motion.div
+        ref={bouquetCaptureRef}
+        data-preview-bouquet-capture=""
+        className="relative mx-auto w-full min-w-0 overflow-hidden rounded-[var(--radius-card)] shadow-[0_20px_50px_-24px_rgba(42,34,27,0.18)]"
+        animate={
+          isCapturingPreview
+            ? {
+                boxShadow: [
+                  '0 20px 50px -24px rgba(42,34,27,0.18)',
+                  '0 24px 60px -20px rgba(42,34,27,0.22), 0 0 0 1px rgba(243,182,169,0.35)',
+                  '0 20px 50px -24px rgba(42,34,27,0.18)',
+                ],
+              }
+            : { boxShadow: '0 20px 50px -24px rgba(42,34,27,0.18)' }
+        }
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         style={{
-          height: BOUQUET_SCENE_H + CARD_PEEK,
+          padding: 'clamp(20px, 5vw, 36px) clamp(16px, 4vw, 28px)',
+          background:
+            'linear-gradient(168deg, #fff9f6 0%, #f8eee6 38%, #eef3ea 72%, #f3e8e2 100%)',
         }}
       >
-        {/* Ambient ground shadow */}
-        <span
+        <div
           aria-hidden
-          className="pointer-events-none absolute bottom-0 left-1/2 z-0 h-6 w-[80%] -translate-x-1/2 translate-y-[25%] rounded-[50%] bg-ink-900 opacity-10 blur-2xl"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_72%_48%_at_50%_18%,rgba(255,255,255,0.72),transparent_58%),radial-gradient(ellipse_50%_40%_at_88%_88%,rgba(243,182,169,0.12),transparent_55%),radial-gradient(ellipse_45%_35%_at_12%_75%,rgba(184,197,172,0.14),transparent_50%)]"
         />
 
-        {/*
-          Envelope — anchored at the very bottom of the cluster (slightly below),
-          so it peeks from behind the bouquet's base/stem only, not the middle.
-          Outer div: handles left-centering + z-index jump.
-          Inner motion.div: animates scale (closed→0.55, open→0.8) with a spring,
-          keeping rotate(3deg) and transformOrigin:'bottom center' stable.
-          Click: z-index flips to 30 (above wrapper-front) and flap opens in place.
-          Click again: flap closes, then z-index drops back to 1 after ~0.3 s.
-          Escape key mirrors the second click via the useEffect above.
-        */}
-        <div
-          className="absolute"
-          style={{
-            bottom: 85,
-            left: '50%',
-            transform: 'translateX(calc(-50% + 25px))',
-            zIndex: letterOpen ? 30 : 1,
-            // Delay z-index drop until after the flap-close animation (~0.3 s).
-            transition: letterOpen ? 'z-index 0s' : 'z-index 0s 0.3s',
-            cursor: 'pointer',
-          }}
-          onClick={() => setLetterOpen((prev) => !prev)}
-        >
-          <motion.div
-            style={{ transformOrigin: 'bottom center', rotate: 3 }}
-            animate={{ scale: letterOpen ? 0.8 : 0.55 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-          >
-            <Envelope
-              letterText={letterText}
-              paperColor={letterCardColor}
-              open={letterOpen}
+        {isCapturingPreview ? (
+          /* Download-only: tight centered group — bouquet width tracks wrapper, not full bleed */
+          <div className="relative flex w-full justify-center py-2">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 left-1/2 z-0 h-8 w-[min(92%,420px)] max-w-[420px] -translate-x-1/2 translate-y-[35%] rounded-[50%] bg-ink-900 opacity-[0.09] blur-2xl"
             />
-          </motion.div>
-        </div>
-
-        {/* Bouquet group — wrapper-back / blooms / wrapper-front, read-only */}
-        <div
-          ref={bouquetCaptureRef}
-          className="absolute left-0 right-0 top-0"
-          style={{ height: BOUQUET_SCENE_H }}
-          data-preview-bouquet-capture=""
-        >
-          {/* Wrapper back — z-[2] */}
-          <div className="pointer-events-none absolute inset-0 z-[2] flex flex-col items-center justify-end">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={wrapperId}
-                initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            <div className="relative z-[1] mx-auto flex max-w-full flex-row flex-wrap items-end justify-center gap-5 sm:gap-6 md:gap-7">
+              <div
+                className="relative shrink-0"
+                style={{
+                  width: downloadBouquetColumnWidthPx(),
+                  height: BOUQUET_SCENE_H,
+                }}
               >
-                <WrapperRender layer="back" wrapperId={wrapperId} height={WRAPPER_H} />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Blooms — read-only, z-[10] */}
-          <div className="pointer-events-none absolute inset-0 z-[10]">
-              {bouquet.map((p) => {
-              const meta = FLOWERS_BY_ID[p.flowerId]
-              if (!meta) return null
-              return (
-                <div
-                  key={p.instanceId}
-                  aria-hidden
-                  className="absolute select-none"
-                  style={{
-                    left: `${p.xPct}%`,
-                    top: `${p.yPct}%`,
-                    padding: '6px',
-                    transform: `translate(-50%, -50%) rotate(${p.rotation}deg) scale(${p.scale})`,
-                    transformOrigin: '50% 50%',
-                    filter:
-                      'drop-shadow(0 5px 7px rgba(42,34,27,0.12)) drop-shadow(0 1px 1px rgba(42,34,27,0.08))',
-                  }}
-                >
-                  <TrimmedFlowerImage
-                    src={meta.imagePath}
-                    alt={meta.name}
-                    displayHeightPx={88}
-                    fallbackImgClassName="h-[88px] w-auto object-contain"
-                  />
+                <BouquetOnlyStack
+                  wrapperId={wrapperId}
+                  bouquet={bouquet}
+                  layoutInstant
+                />
+              </div>
+              <div className="relative z-[1] flex shrink-0 flex-col items-center justify-end pb-0.5 pt-3 sm:pt-0">
+                <div className="pointer-events-none [&_button]:cursor-default">
+                  <motion.div
+                    initial={false}
+                    animate={{ scale: 0.9, rotate: -2 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+                    style={{ transformOrigin: 'bottom center' }}
+                  >
+                    <Envelope
+                      letterText={letterText}
+                      paperColor={letterCardColor}
+                      open
+                    />
+                  </motion.div>
                 </div>
-              )
-            })}
+              </div>
+            </div>
           </div>
+        ) : (
+          /* Interactive preview: envelope tucked under bouquet */
+          <div
+            className="relative w-full min-w-0"
+            style={{
+              height: BOUQUET_SCENE_H + CARD_PEEK,
+            }}
+          >
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 left-1/2 z-0 h-6 w-[80%] -translate-x-1/2 translate-y-[25%] rounded-[50%] bg-ink-900 opacity-10 blur-2xl"
+            />
 
-          {/* Wrapper front — gradient mask sits above blooms, hides stems naturally */}
-          <div className="pointer-events-none absolute inset-0 z-[20] flex flex-col items-center justify-end">
-            <AnimatePresence mode="wait">
+            <div
+              className="absolute"
+              style={{
+                bottom: 85,
+                left: '50%',
+                transform: 'translateX(calc(-50% + 25px))',
+                zIndex: letterOpen ? 30 : 1,
+                transition: letterOpen ? 'z-index 0s' : 'z-index 0s 0.3s',
+                cursor: 'pointer',
+              }}
+              onClick={() => setLetterOpen((prev) => !prev)}
+            >
               <motion.div
-                key={wrapperId}
-                initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                style={{ transformOrigin: 'bottom center', rotate: 3 }}
+                animate={{ scale: letterOpen ? 0.8 : 0.55 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 24 }}
               >
-                <WrapperRender layer="front" wrapperId={wrapperId} height={WRAPPER_H} />
+                <Envelope
+                  letterText={letterText}
+                  paperColor={letterCardColor}
+                  open={letterOpen}
+                />
               </motion.div>
-            </AnimatePresence>
+            </div>
+
+            <div
+              className="absolute left-0 right-0 top-0"
+              style={{ height: BOUQUET_SCENE_H }}
+            >
+              <BouquetOnlyStack wrapperId={wrapperId} bouquet={bouquet} />
+            </div>
           </div>
+        )}
+      </motion.div>
 
-        </div>
-      </div>
-
-      {/* Minimal text-link edit controls */}
       <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
         <button
           type="button"
@@ -195,10 +271,11 @@ export function PreviewScene({
         </button>
         <button
           type="button"
+          disabled={isCapturingPreview}
           onClick={onDownloadImage}
-          className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 underline decoration-cream-300/90 underline-offset-4 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+          className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 underline decoration-cream-300/90 underline-offset-4 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 disabled:cursor-wait disabled:opacity-60"
         >
-          Download image
+          {isCapturingPreview ? 'Saving…' : 'Download image'}
         </button>
         <button
           type="button"

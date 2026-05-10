@@ -102,9 +102,9 @@ export function Envelope({ letterText, paperColor, open: openProp, className = '
         }}
       />
 
-      {/* Letter — slides up out of the body. Sits behind the front pocket so
-          the bottom appears tucked in; the top portion emerges above the
-          envelope mouth where the flap used to be. */}
+      {/* Letter — between back (z-1) and front pocket (z-3) when closed so it
+          looks tucked in. When open, moves above the pocket (z-10) so lines &
+          text stay visible; html-to-image also mishandles 3D flap stacking. */}
       <motion.span
         aria-hidden
         initial={false}
@@ -115,7 +115,7 @@ export function Envelope({ letterText, paperColor, open: openProp, className = '
           damping: 26,
           delay: isOpen ? 0.18 : 0,
         }}
-        className="absolute z-[2] overflow-hidden rounded-[3px]"
+        className={`absolute overflow-hidden rounded-[3px] ${isOpen ? 'z-[10]' : 'z-[2]'}`}
         style={{
           width: LETTER_W,
           height: LETTER_H,
@@ -162,19 +162,18 @@ export function Envelope({ letterText, paperColor, open: openProp, className = '
         }}
       />
 
-      {/* Flap — rotates around its top edge from 0 → 180deg.
-          With backface-visibility hidden it disappears past 90deg, revealing
-          the letter behind. Stays at z=5 so it covers the front pocket when
-          closed but is "above" only visually until it flips away. */}
+      {/* Flap — z above pocket when closed; when open, drop behind letter/pocket
+          so flattened PNG capture still shows the note (avoids 3D + raster bugs). */}
       <motion.span
         aria-hidden
         initial={false}
         animate={{ rotateX: isOpen ? 180 : 0 }}
         transition={{ type: 'spring', stiffness: 220, damping: 22 }}
-        className="absolute left-0 right-0 z-[5]"
+        className="absolute left-0 right-0"
         style={{
           height: FLAP_H,
           top: flapTop,
+          zIndex: isOpen ? 1 : 5,
           backgroundColor: FLAP_LIGHT,
           clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
           transformOrigin: 'top',
@@ -198,10 +197,10 @@ export function Envelope({ letterText, paperColor, open: openProp, className = '
         </span>
       </motion.span>
 
-      {/* Focus ring — sits over envelope only, not the slid-out letter area */}
+      {/* Focus ring — below open letter so note text isn’t dimmed in screenshots */}
       <span
         aria-hidden
-        className="pointer-events-none absolute left-0 right-0 z-[8] rounded-[8px] ring-0 ring-offset-2 ring-offset-cream-50 transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-ink-400/45"
+        className={`pointer-events-none absolute left-0 right-0 rounded-[8px] ring-0 ring-offset-2 ring-offset-cream-50 transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-ink-400/45 ${isOpen ? 'z-[4]' : 'z-[8]'}`}
         style={{ bottom: 0, height: ENV_H }}
       />
     </button>

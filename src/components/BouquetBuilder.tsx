@@ -139,6 +139,8 @@ export function BouquetBuilder() {
     () => sharedFromUrl?.letterCardColor ?? LETTER_PAPER_PRESETS[0].color,
   )
 
+  const [isCapturingPreview, setIsCapturingPreview] = useState(false)
+
   const activeFlower = useMemo(
     () => (activeFlowerId ? FLOWERS_BY_ID[activeFlowerId] : null),
     [activeFlowerId],
@@ -283,6 +285,10 @@ export function BouquetBuilder() {
   async function handleDownloadPreviewImage() {
     const node = previewBouquetCaptureRef.current
     if (!node) return
+    setIsCapturingPreview(true)
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    /* Let envelope spring open + export frame pulse settle before rasterizing */
+    await new Promise((r) => setTimeout(r, 580))
     try {
       const { toPng } = await import('html-to-image')
       const dataUrl = await toPng(node, {
@@ -298,6 +304,8 @@ export function BouquetBuilder() {
       a.remove()
     } catch {
       /* malformed DOM / unsupported: ignore */
+    } finally {
+      setIsCapturingPreview(false)
     }
   }
 
@@ -552,6 +560,7 @@ export function BouquetBuilder() {
                   onEditMessage={() => setStep('letter')}
                   onEditBouquet={() => setStep('studio')}
                   bouquetCaptureRef={previewBouquetCaptureRef}
+                  isCapturingPreview={isCapturingPreview}
                   onDownloadImage={() => void handleDownloadPreviewImage()}
                   onCopyShareLink={handleCopyShareLink}
                 />
