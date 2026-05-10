@@ -68,6 +68,7 @@ export function TrimmedFlowerImage({
         alt={alt}
         className={fallbackImgClassName}
         draggable={false}
+        decoding="async"
       />
     )
   }
@@ -86,6 +87,7 @@ export function TrimmedFlowerImage({
         src={src}
         alt={alt}
         draggable={false}
+        decoding="async"
         className="pointer-events-none max-w-none select-none"
         style={{
           position: 'absolute',

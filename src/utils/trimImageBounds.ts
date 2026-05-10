@@ -12,6 +12,9 @@ export type TrimmedImageBoundsResult = {
 
 const DEFAULT_THRESHOLD = 8
 
+/** Downscale on the GPU-side draw, then scan few pixels — keeps main thread responsive on large PNGs. */
+const MAX_TRIM_SCAN_EDGE = 240
+
 function cacheKey(src: string, alphaThreshold: number) {
   return `${src}::${alphaThreshold}`
 }
@@ -71,19 +74,33 @@ async function computeTrimmedImageBounds(
       return fullBox
     }
     const canvas = document.createElement('canvas')
-    canvas.width = iw
-    canvas.height = ih
+    const longEdge = Math.max(iw, ih)
+    const scale =
+      longEdge <= MAX_TRIM_SCAN_EDGE ? 1 : MAX_TRIM_SCAN_EDGE / longEdge
+    const sw = Math.max(1, Math.round(iw * scale))
+    const sh = Math.max(1, Math.round(ih * scale))
+    canvas.width = sw
+    canvas.height = sh
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) {
       return fullBox
     }
-    ctx.drawImage(img, 0, 0)
-    const imageData = ctx.getImageData(0, 0, iw, ih)
-    const bounds = scanAlphaBounds(imageData.data, iw, ih, alphaThreshold)
+    ctx.drawImage(img, 0, 0, sw, sh)
+    const imageData = ctx.getImageData(0, 0, sw, sh)
+    const bounds = scanAlphaBounds(imageData.data, sw, sh, alphaThreshold)
     if (!bounds || bounds.w < 1 || bounds.h < 1) {
       return fullBox
     }
-    return { ...bounds, iw, ih }
+    const sx = iw / sw
+    const sy = ih / sh
+    const x = Math.max(0, Math.floor(bounds.x * sx))
+    const y = Math.max(0, Math.floor(bounds.y * sy))
+    const w = Math.min(iw - x, Math.ceil(bounds.w * sx))
+    const h = Math.min(ih - y, Math.ceil(bounds.h * sy))
+    if (w < 1 || h < 1) {
+      return fullBox
+    }
+    return { x, y, w, h, iw, ih }
   } catch {
     return fullBox
   }

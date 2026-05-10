@@ -11,8 +11,7 @@ import {
 } from '@dnd-kit/core'
 import { getEventCoordinates } from '@dnd-kit/utilities'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { toPng } from 'html-to-image'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { FLOWERS_BY_ID } from '../data/flowers'
 import { WRAPPERS } from '../data/wrappers'
 import type {
@@ -25,8 +24,6 @@ import type {
 import { FloatingCTA } from './FloatingCTA'
 import { FlowerCard } from './FlowerCard'
 import { LETTER_PAPER_PRESETS } from '../data/letterPaperPresets'
-import { LetterCard } from './LetterCard'
-import { PreviewScene } from './PreviewScene'
 import { ShelfPanel } from './ShelfPanel'
 import {
   clampPlacementPercent,
@@ -39,6 +36,16 @@ import {
   serializeShareState,
 } from '../utils/shareState'
 import { VASE_DROP_ID, VaseCanvas } from './VaseCanvas'
+
+const LetterCard = lazy(async () => {
+  const m = await import('./LetterCard')
+  return { default: m.LetterCard }
+})
+
+const PreviewScene = lazy(async () => {
+  const m = await import('./PreviewScene')
+  return { default: m.PreviewScene }
+})
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
@@ -230,8 +237,9 @@ export function BouquetBuilder() {
     const node = previewBouquetCaptureRef.current
     if (!node) return
     try {
+      const { toPng } = await import('html-to-image')
       const dataUrl = await toPng(node, {
-        pixelRatio: 2,
+        pixelRatio: Math.min(2, window.devicePixelRatio || 2),
         cacheBust: true,
       })
       const a = document.createElement('a')
@@ -448,14 +456,16 @@ export function BouquetBuilder() {
               transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
               className="relative w-full rounded-[var(--radius-card)] border border-cream-200/35 bg-cream-50/92 px-8 py-9 shadow-soft backdrop-blur-[3px] sm:px-10 sm:py-11"
             >
-              <LetterCard
-                letterText={letterText}
-                onLetterTextChange={setLetterText}
-                onBack={() => setStep('studio')}
-                onDone={() => setStep('preview')}
-                paperColor={letterCardColor}
-                onPaperColorChange={setLetterCardColor}
-              />
+              <Suspense fallback={<div className="min-h-[28rem] rounded-md bg-cream-100/40" aria-hidden />}>
+                <LetterCard
+                  letterText={letterText}
+                  onLetterTextChange={setLetterText}
+                  onBack={() => setStep('studio')}
+                  onDone={() => setStep('preview')}
+                  paperColor={letterCardColor}
+                  onPaperColorChange={setLetterCardColor}
+                />
+              </Suspense>
             </motion.div>
           </motion.div>
         )}
@@ -484,17 +494,19 @@ export function BouquetBuilder() {
                 </p>
               </div>
 
-              <PreviewScene
-                wrapperId={selectedWrapper.id}
-                bouquet={bouquet}
-                letterText={letterText}
-                letterCardColor={letterCardColor}
-                onEditMessage={() => setStep('letter')}
-                onEditBouquet={() => setStep('studio')}
-                bouquetCaptureRef={previewBouquetCaptureRef}
-                onDownloadImage={() => void handleDownloadPreviewImage()}
-                onCopyShareLink={handleCopyShareLink}
-              />
+              <Suspense fallback={<div className="min-h-[32rem] rounded-md bg-cream-100/40" aria-hidden />}>
+                <PreviewScene
+                  wrapperId={selectedWrapper.id}
+                  bouquet={bouquet}
+                  letterText={letterText}
+                  letterCardColor={letterCardColor}
+                  onEditMessage={() => setStep('letter')}
+                  onEditBouquet={() => setStep('studio')}
+                  bouquetCaptureRef={previewBouquetCaptureRef}
+                  onDownloadImage={() => void handleDownloadPreviewImage()}
+                  onCopyShareLink={handleCopyShareLink}
+                />
+              </Suspense>
             </motion.div>
           </motion.div>
         )}

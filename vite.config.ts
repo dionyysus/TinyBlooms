@@ -24,4 +24,16 @@ export default defineConfig(({ command, isPreview }) => ({
   // Dev server always uses `/`. Production uses `deployBase()` (`/` unless `VITE_BASE_PATH` is set).
   base: command === 'serve' && !isPreview ? '/' : deployBase(),
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/framer-motion')) return 'motion'
+          if (id.includes('node_modules/@dnd-kit')) return 'dnd'
+          if (id.includes('node_modules/html-to-image')) return 'html-to-image'
+          if (id.includes('node_modules/lz-string')) return 'lz-string'
+        },
+      },
+    },
+  },
 }))

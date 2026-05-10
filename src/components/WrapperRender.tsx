@@ -27,6 +27,7 @@ export function WrapperRender({ wrapperId, layer, height = 360, className = '' }
         src={wrapper.imagePath}
         alt={wrapper.name}
         className={`w-auto object-contain ${className}`}
+        decoding="async"
         style={{
           height: `${height}px`,
           maskImage: FRONT_MASK,
@@ -43,6 +44,7 @@ export function WrapperRender({ wrapperId, layer, height = 360, className = '' }
       src={wrapper.imagePath}
       alt={wrapper.name}
       className={`w-auto object-contain ${className}`}
+      decoding="async"
       style={{ height: `${height}px`, opacity: 0.9 }}
     />
   )
@@ -62,6 +64,7 @@ export function WrapperRenderFull({
       src={wrapper.imagePath}
       alt={wrapper.name}
       className={`w-auto object-contain ${className}`}
+      decoding="async"
       style={{ height: `${height}px` }}
     />
   )
