@@ -34,6 +34,7 @@ import {
 import {
   buildShareUrl,
   deserializeShareState,
+  getEmbedModeFromLocation,
   getSharePayloadFromLocation,
   serializeShareState,
 } from '../utils/shareState'
@@ -114,6 +115,12 @@ export function BouquetBuilder() {
     return raw ? deserializeShareState(raw) : null
   }, [])
 
+  const embedMode = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return getEmbedModeFromLocation()
+  }, [])
+  const isEmbedViewer = embedMode && sharedFromUrl !== null
+
   const [tab, setTab] = useState<ShelfTab>('flowers')
   const [wrapperId, setWrapperId] = useState<WrapperId>(
     () => sharedFromUrl?.wrapperId ?? 'paper',
@@ -162,6 +169,15 @@ export function BouquetBuilder() {
       },
     }),
   )
+
+  useEffect(() => {
+    if (!isEmbedViewer) return
+    const prev = document.title
+    document.title = 'Tiny Blooms'
+    return () => {
+      document.title = prev
+    }
+  }, [isEmbedViewer])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -317,7 +333,7 @@ export function BouquetBuilder() {
         letterText,
         letterCardColor,
       })
-      const url = buildShareUrl(payload)
+      const url = buildShareUrl(payload, { embed: true })
       await navigator.clipboard.writeText(url)
     } catch {
       /* clipboard / serialization */
@@ -325,6 +341,49 @@ export function BouquetBuilder() {
   }
 
   const crossfade = { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const }
+
+  if (embedMode && !sharedFromUrl) {
+    return (
+      <main className="flex min-h-screen w-full flex-col items-center justify-center bg-cream-50 px-6 py-10 text-center text-[13px] text-ink-500">
+        <p className="max-w-sm leading-relaxed">
+          This bouquet link is missing or invalid. Ask the sender for a new link.
+        </p>
+      </main>
+    )
+  }
+
+  if (isEmbedViewer) {
+    return (
+      <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-cream-50 px-4 py-8 sm:px-6 sm:py-10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(56%_42%_at_50%_12%,rgba(243,182,169,0.07),transparent_72%),radial-gradient(48%_40%_at_88%_78%,rgba(184,197,172,0.07),transparent_72%)]"
+        />
+        <Suspense
+          fallback={
+            <div
+              className="relative z-10 min-h-[20rem] w-full max-w-[min(792px,100%)] rounded-md bg-cream-100/50"
+              aria-hidden
+            />
+          }
+        >
+          <div className="relative z-10 w-full max-w-[min(792px,100%)]">
+            <PreviewScene
+              embedded
+              wrapperId={wrapperId}
+              bouquet={bouquet}
+              letterText={letterText}
+              letterCardColor={letterCardColor}
+              onEditMessage={() => {}}
+              onEditBouquet={() => {}}
+              onDownloadImage={() => {}}
+              onCopyShareLink={() => {}}
+            />
+          </div>
+        </Suspense>
+      </main>
+    )
+  }
 
   return (
     <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-cream-50 px-6 py-10 text-ink-900 sm:px-10 sm:py-12 md:px-14 md:py-14">

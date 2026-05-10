@@ -15,12 +15,14 @@ type Props = {
   letterCardColor: string
   onEditMessage: () => void
   onEditBouquet: () => void
-  /** Captures soft backdrop + envelope + bouquet as PNG. */
-  bouquetCaptureRef: RefObject<HTMLDivElement | null>
+  /** Captures soft backdrop + envelope + bouquet as PNG. Omit in viewer/embed mode. */
+  bouquetCaptureRef?: RefObject<HTMLDivElement | null>
   /** While true, switches to a download-only side-by-side layout and captures. */
   isCapturingPreview?: boolean
   onDownloadImage: () => void
   onCopyShareLink: () => void | Promise<void>
+  /** Viewer share links: hide action row and extra chrome; only bouquet + envelope. */
+  embedded?: boolean
 }
 
 /** how many px of the envelope peek below the bouquet (stacked preview only) */
@@ -126,6 +128,7 @@ export function PreviewScene({
   isCapturingPreview = false,
   onDownloadImage,
   onCopyShareLink,
+  embedded = false,
 }: Props) {
   const [letterOpen, setLetterOpen] = useState(false)
 
@@ -139,9 +142,15 @@ export function PreviewScene({
   }, [letterOpen])
 
   return (
-    <div className="flex w-full shrink-0 flex-col px-6 py-10 sm:px-8 sm:py-12">
+    <div
+      className={
+        embedded
+          ? 'flex w-full max-w-[min(792px,100%)] shrink-0 flex-col px-3 py-6 sm:px-4 sm:py-8'
+          : 'flex w-full shrink-0 flex-col px-6 py-10 sm:px-8 sm:py-12'
+      }
+    >
       <motion.div
-        ref={bouquetCaptureRef}
+        ref={bouquetCaptureRef ?? undefined}
         data-preview-bouquet-capture=""
         className="relative mx-auto w-full min-w-0 overflow-hidden rounded-[var(--radius-card)] shadow-[0_20px_50px_-24px_rgba(42,34,27,0.18)]"
         animate={
@@ -254,37 +263,39 @@ export function PreviewScene({
         )}
       </motion.div>
 
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-        <button
-          type="button"
-          onClick={onEditMessage}
-          className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
-        >
-          Edit message
-        </button>
-        <button
-          type="button"
-          onClick={onEditBouquet}
-          className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
-        >
-          Edit bouquet
-        </button>
-        <button
-          type="button"
-          disabled={isCapturingPreview}
-          onClick={onDownloadImage}
-          className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 underline decoration-cream-300/90 underline-offset-4 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 disabled:cursor-wait disabled:opacity-60"
-        >
-          {isCapturingPreview ? 'Saving…' : 'Download image'}
-        </button>
-        <button
-          type="button"
-          onClick={() => void onCopyShareLink()}
-          className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 underline decoration-cream-300/90 underline-offset-4 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
-        >
-          Copy link
-        </button>
-      </div>
+      {embedded ? null : (
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          <button
+            type="button"
+            onClick={onEditMessage}
+            className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+          >
+            Edit message
+          </button>
+          <button
+            type="button"
+            onClick={onEditBouquet}
+            className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+          >
+            Edit bouquet
+          </button>
+          <button
+            type="button"
+            disabled={isCapturingPreview}
+            onClick={onDownloadImage}
+            className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 underline decoration-cream-300/90 underline-offset-4 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 disabled:cursor-wait disabled:opacity-60"
+          >
+            {isCapturingPreview ? 'Saving…' : 'Download image'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void onCopyShareLink()}
+            className="border-0 bg-transparent px-0 py-1 text-[13px] font-medium text-ink-500 underline decoration-cream-300/90 underline-offset-4 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+          >
+            Copy link
+          </button>
+        </div>
+      )}
     </div>
   )
 }

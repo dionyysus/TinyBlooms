@@ -123,7 +123,28 @@ export function getSharePayloadFromLocation(): string | null {
   }
 }
 
-export function buildShareUrl(serialized: string): string {
+/** Viewer-only mode: no chrome, only bouquet + envelope (see `buildShareUrl(..., { embed: true })`). */
+export function getEmbedModeFromLocation(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return new URL(window.location.href).searchParams.get('embed') === '1'
+  } catch {
+    return false
+  }
+}
+
+export type BuildShareUrlOptions = {
+  /** When true, opens in viewer-only layout (query `embed=1`). */
+  embed?: boolean
+}
+
+export function buildShareUrl(serialized: string, opts?: BuildShareUrlOptions): string {
   const base = `${window.location.origin}${window.location.pathname}`
+  if (opts?.embed) {
+    const u = new URL(base)
+    u.searchParams.set('s', serialized)
+    u.searchParams.set('embed', '1')
+    return u.toString()
+  }
   return `${base}#s=${serialized}`
 }
