@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* This project lives under a hidden ancestor directory (.cursor/...).
+ * Tailwind v4's directory walker won't recurse through hidden ancestors,
+ * so we register source files via explicit per-folder globs. */
+@source "./*.tsx";
+@source "./*.ts";
+@source "./components/*.tsx";
+@source "./data/*.ts";
+@source "./types/*.ts";
+@source "./utils/*.ts";
+@source "../index.html";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif:
+    'Fraunces', 'Iowan Old Style', 'Apple Garamond', Georgia, serif;
+
+  /* Warm cream palette — quiet canvas, content-forward */
+  --color-cream-50: #fdfcf7;
+  --color-cream-100: #faf7ef;
+  /* Letter stationery default — matches former LetterCard surface */
+  --color-letter-paper: #faf7f0;
+  --color-cream-200: #f2ebe0;
+  --color-cream-300: #e5dacb;
+  --color-ink-900: #2a221b;
+  --color-ink-700: #4a3f33;
+  --color-ink-500: #7a6e60;
+  --color-ink-400: #9c8f80;
+  --color-ink-300: #c4b8a8;
+
+  /* Accent palette */
+  --color-blush-100: #fbe4dd;
+  --color-blush-300: #f3b6a9;
+  --color-blush-500: #d97a6b;
+  --color-blush-600: #c25e4f;
+  --color-blush-700: #a14739;
+
+  --color-sage-100: #e8ede1;
+  --color-sage-300: #b8c5ac;
+  --color-sage-500: #7a8b6c;
+  --color-sage-700: #4f5e44;
+
+  --color-amber-soft: #e8c79b;
+  --color-mauve-soft: #d8b4c4;
+  --color-butter: #f4dfa6;
+
+  --shadow-soft: 0 1px 1px rgba(42, 34, 27, 0.03),
+    0 10px 28px -12px rgba(42, 34, 27, 0.06);
+  --shadow-card: 0 1px 1px rgba(42, 34, 27, 0.028),
+    0 16px 40px -18px rgba(42, 34, 27, 0.07);
+  --shadow-floating: 0 2px 6px rgba(42, 34, 27, 0.05),
+    0 18px 36px -14px rgba(42, 34, 27, 0.1);
+
+  --radius-card: 20px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--color-cream-50);
+    color: var(--color-ink-900);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+@layer utilities {
+  /* 3D perspective container — used by the preview envelope flap rotateX */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  /* tasteful scrollbar that matches the cream palette */
+  .scroll-soft {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-cream-300) transparent;
+  }
+  .scroll-soft::-webkit-scrollbar {
+    width: 8px;
+  }
+  .scroll-soft::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-soft::-webkit-scrollbar-thumb {
+    background-color: var(--color-cream-300);
+    border-radius: 9999px;
+  }
+
+  /* Soft paper grain — barely-there texture */
+  .grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.28;
+    mix-blend-mode: multiply;
+    background-image:
+      radial-gradient(
+        rgba(122, 110, 96, 0.035) 1px,
+        transparent 1px
+      ),
+      radial-gradient(
+        rgba(122, 110, 96, 0.028) 1px,
+        transparent 1px
+      );
+    background-size: 6px 6px, 9px 9px;
+    background-position: 0 0, 3px 3px;
+  }
+
+  /* Lighter grain for stationery / letter surfaces */
+  .grain-light {
+    position: relative;
+    isolation: isolate;
+  }
+  .grain-light::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    mix-blend-mode: multiply;
+    border-radius: inherit;
+    background-image:
+      radial-gradient(
+        rgba(122, 110, 96, 0.032) 1px,
+        transparent 1px
+      ),
+      radial-gradient(
+        rgba(122, 110, 96, 0.024) 1px,
+        transparent 1px
+      );
+    background-size: 6px 6px, 9px 9px;
+    background-position: 0 0, 3px 3px;
+    z-index: 0;
+  }
+}
