@@ -3,21 +3,25 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 /**
- * Public base path must match the deployed URL (GitHub Project Pages).
- * @see https://vite.dev/guide/build.html#public-base-path
- * @see https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages#types-of-github-pages-sites
+ * Production asset base path.
  *
- * Override for forks: `VITE_BASE_PATH=/OtherRepo/ npm run build`
+ * - **Default `/`** — correct for Vercel, Netlify, `*.github.io` user sites, and most hosts.
+ * - **GitHub *project* Pages** (`https://user.github.io/RepoName/`) — set at build time:
+ *   `VITE_BASE_PATH=/RepoName/ npm run build` (see `npm run build:gh-pages`).
+ *
+ * @see https://vite.dev/guide/build.html#public-base-path
  */
 function deployBase(): string {
   const raw = process.env.VITE_BASE_PATH?.trim()
-  const path = raw && raw.length > 0 ? raw : '/TinyBlooms/'
-  return path.endsWith('/') ? path : `${path}/`
+  if (raw && raw.length > 0) {
+    return raw.endsWith('/') ? raw : `${raw}/`
+  }
+  return '/'
 }
 
 // https://vite.dev/config/
 export default defineConfig(({ command, isPreview }) => ({
-  // Dev uses `/` so `/src/main.tsx` resolves; build and `vite preview` use the subpath.
+  // Dev server always uses `/`. Production uses `deployBase()` (`/` unless `VITE_BASE_PATH` is set).
   base: command === 'serve' && !isPreview ? '/' : deployBase(),
   plugins: [react(), tailwindcss()],
 }))
