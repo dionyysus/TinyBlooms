@@ -441,6 +441,9 @@ function BouquetLayer({
   ) {
     if (e.button !== 0) return
     e.stopPropagation()
+    if (e.pointerType === 'touch') {
+      e.preventDefault()
+    }
     onSelectBloom?.(p.instanceId)
     dragSessionRef.current = {
       pointerId: e.pointerId,
@@ -552,7 +555,7 @@ function BouquetLayer({
               setDraggingInstanceId(null)
             }}
             onWheel={(e) => handleBloomWheel(e, p)}
-            className="pointer-events-auto absolute inline-flex max-w-fit cursor-grab select-none items-center justify-center rounded-sm active:cursor-grabbing outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/30"
+            className="pointer-events-auto absolute inline-flex max-w-fit touch-none cursor-grab select-none items-center justify-center rounded-sm active:cursor-grabbing outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/30"
             style={{
               left: `${p.xPct}%`,
               top: `${p.yPct}%`,

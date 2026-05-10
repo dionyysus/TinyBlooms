@@ -2,7 +2,9 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   pointerWithin,
+  useDndMonitor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -46,6 +48,43 @@ const PreviewScene = lazy(async () => {
   const m = await import('./PreviewScene')
   return { default: m.PreviewScene }
 })
+
+/** Prevents mobile browsers from scrolling the page while a shelf flower is on the drag overlay. */
+function DndMobileScrollLock() {
+  const saved = useRef<{
+    bodyOverflow: string
+    bodyTouchAction: string
+    htmlOverscroll: string
+  } | null>(null)
+
+  const unlock = () => {
+    if (!saved.current) return
+    document.body.style.overflow = saved.current.bodyOverflow
+    document.body.style.touchAction = saved.current.bodyTouchAction
+    document.documentElement.style.overscrollBehaviorY =
+      saved.current.htmlOverscroll
+    saved.current = null
+  }
+
+  useDndMonitor({
+    onDragStart() {
+      if (!saved.current) {
+        saved.current = {
+          bodyOverflow: document.body.style.overflow,
+          bodyTouchAction: document.body.style.touchAction,
+          htmlOverscroll: document.documentElement.style.overscrollBehaviorY,
+        }
+      }
+      document.documentElement.style.overscrollBehaviorY = 'none'
+      document.body.style.overflow = 'hidden'
+      document.body.style.touchAction = 'none'
+    },
+    onDragEnd: unlock,
+    onDragCancel: unlock,
+  })
+
+  return null
+}
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
@@ -111,7 +150,15 @@ export function BouquetBuilder() {
   )
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 10 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 120,
+        tolerance: 8,
+      },
+    }),
   )
 
   useEffect(() => {
@@ -292,11 +339,13 @@ export function BouquetBuilder() {
             <DndContext
               sensors={sensors}
               collisionDetection={pointerWithin}
+              autoScroll={false}
               onDragStart={handleDragStart}
               onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
+              <DndMobileScrollLock />
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

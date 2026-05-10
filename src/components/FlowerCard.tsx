@@ -45,12 +45,12 @@ export function FlowerCard({ flower, preview = false }: Props) {
         'select-none',
         preview
           ? [
-              'flex cursor-grabbing items-center justify-center rounded-2xl p-6',
+              'touch-none flex cursor-grabbing items-center justify-center rounded-2xl p-6',
               'ring-1 ring-cream-200/60',
               'shadow-[0_14px_36px_-12px_rgba(42,34,27,0.2)]',
             ].join(' ')
           : [
-              'flex cursor-grab items-center justify-center rounded-full outline-none ring-ink-900/0 transition-[box-shadow,transform]',
+              'touch-none flex cursor-grab items-center justify-center rounded-full outline-none ring-ink-900/0 transition-[box-shadow,transform]',
               'h-20 w-20 active:cursor-grabbing sm:h-[5.5rem] sm:w-[5.5rem]',
               'hover:shadow-[0_4px_14px_-6px_rgba(42,34,27,0.12)] focus-visible:ring-1 focus-visible:ring-ink-400/40',
               isDragging ? 'opacity-35' : '',
