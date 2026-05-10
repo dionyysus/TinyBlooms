@@ -138,8 +138,28 @@ export type BuildShareUrlOptions = {
   embed?: boolean
 }
 
+/**
+ * Base URL for “Copy link”. Uses `VITE_PUBLIC_SITE_URL` when set (prod URL), otherwise
+ * the current page — which is `http://127.0.0.1:5173` during local dev and breaks for recipients.
+ */
+function shareLinkBase(): string {
+  const configured = import.meta.env.VITE_PUBLIC_SITE_URL?.trim()
+  if (configured) {
+    try {
+      const u = new URL(configured)
+      const path = u.pathname.replace(/\/$/, '')
+      return path ? `${u.origin}${path}` : u.origin
+    } catch {
+      /* invalid */
+    }
+  }
+  if (typeof window === 'undefined') return ''
+  const path = window.location.pathname.replace(/\/$/, '')
+  return path ? `${window.location.origin}${path}` : window.location.origin
+}
+
 export function buildShareUrl(serialized: string, opts?: BuildShareUrlOptions): string {
-  const base = `${window.location.origin}${window.location.pathname}`
+  const base = shareLinkBase()
   if (opts?.embed) {
     const u = new URL(base)
     u.searchParams.set('s', serialized)
