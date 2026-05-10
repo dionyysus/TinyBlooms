@@ -2,8 +2,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState, type RefObject } from 'react'
 import { FLOWERS_BY_ID } from '../data/flowers'
 import type { PlacedFlower, WrapperId } from '../types/bouquet'
-import { BOUQUET_SCENE_H, BOUQUET_SCENE_W, WRAPPER_H } from '../utils/bouquetSceneSize'
+import { BOUQUET_SCENE_H, WRAPPER_H } from '../utils/bouquetSceneSize'
 import { Envelope } from './Envelope'
+import { TrimmedFlowerImage } from './TrimmedFlowerImage'
 import { WrapperRender } from './WrapperRender'
 
 type Props = {
@@ -51,16 +52,15 @@ export function PreviewScene({
   }, [letterOpen])
 
   return (
-    <div className="flex w-full shrink-0 flex-col items-center px-6 py-10 sm:px-8 sm:py-12">
+    <div className="flex w-full shrink-0 flex-col px-6 py-10 sm:px-8 sm:py-12">
       {/*
-        Cluster: fixed width anchors all children to % offsets — no vw/vh units.
+        Cluster: full width of card — % bloom offsets match studio for the same width.
         Total height = SCENE_HEIGHT (bouquet) + CARD_PEEK (visible card strip).
         z-order: letter card z-[1], wrapper z-[2], blooms z-[10], card-open z-[30].
       */}
       <div
-        className="relative"
+        className="relative w-full min-w-0"
         style={{
-          width: BOUQUET_SCENE_W,
           height: BOUQUET_SCENE_H + CARD_PEEK,
         }}
       >
@@ -148,11 +148,11 @@ export function PreviewScene({
                       'drop-shadow(0 5px 7px rgba(42,34,27,0.12)) drop-shadow(0 1px 1px rgba(42,34,27,0.08))',
                   }}
                 >
-                  <img
+                  <TrimmedFlowerImage
                     src={meta.imagePath}
                     alt={meta.name}
-                    className="h-[88px] w-auto object-contain"
-                    draggable={false}
+                    displayHeightPx={88}
+                    fallbackImgClassName="h-[88px] w-auto object-contain"
                   />
                 </div>
               )

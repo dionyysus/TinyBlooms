@@ -9,8 +9,10 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
+import { getEventCoordinates } from '@dnd-kit/utilities'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toPng } from 'html-to-image'
 import { FLOWERS_BY_ID } from '../data/flowers'
 import { WRAPPERS } from '../data/wrappers'
 import type {
@@ -30,6 +32,12 @@ import {
   clampPlacementPercent,
   clientToClampedPlacementPercent,
 } from '../utils/dropPosition'
+import {
+  buildShareUrl,
+  deserializeShareState,
+  getSharePayloadFromLocation,
+  serializeShareState,
+} from '../utils/shareState'
 import { VASE_DROP_ID, VaseCanvas } from './VaseCanvas'
 
 function clamp(n: number, min: number, max: number) {
@@ -53,33 +61,36 @@ function variationFromDrop(existingCount: number): {
   return { rotation, scale }
 }
 
-function activatorClientPoint(event: Event): { x: number; y: number } | null {
-  if (
-    'clientX' in event &&
-    typeof (event as PointerEvent | MouseEvent).clientX === 'number'
-  ) {
-    const pe = event as PointerEvent | MouseEvent
-    return { x: pe.clientX, y: pe.clientY }
-  }
-  return null
-}
-
 export function BouquetBuilder() {
+  const sharedFromUrl = useMemo(() => {
+    if (typeof window === 'undefined') return null
+    const raw = getSharePayloadFromLocation()
+    return raw ? deserializeShareState(raw) : null
+  }, [])
+
   const [tab, setTab] = useState<ShelfTab>('flowers')
-  const [wrapperId, setWrapperId] = useState<WrapperId>('paper')
-  const [bouquet, setBouquet] = useState<PlacedFlower[]>([])
+  const [wrapperId, setWrapperId] = useState<WrapperId>(
+    () => sharedFromUrl?.wrapperId ?? 'paper',
+  )
+  const [bouquet, setBouquet] = useState<PlacedFlower[]>(
+    () => sharedFromUrl?.bouquet ?? [],
+  )
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(
     null,
   )
   const [activeFlowerId, setActiveFlowerId] = useState<FlowerId | null>(null)
-  const initialPointerRef = useRef<{ x: number; y: number } | null>(null)
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
   const bloomPlacementElRef = useRef<HTMLElement | null>(null)
+  const previewBouquetCaptureRef = useRef<HTMLDivElement | null>(null)
 
-  const [step, setStep] = useState<Step>('studio')
-  const [letterText, setLetterText] = useState('')
+  const [step, setStep] = useState<Step>(() =>
+    sharedFromUrl ? 'preview' : 'studio',
+  )
+  const [letterText, setLetterText] = useState(
+    () => sharedFromUrl?.letterText ?? '',
+  )
   const [letterCardColor, setLetterCardColor] = useState<string>(
-    () => LETTER_PAPER_PRESETS[0].color,
+    () => sharedFromUrl?.letterCardColor ?? LETTER_PAPER_PRESETS[0].color,
   )
 
   const activeFlower = useMemo(
@@ -153,24 +164,22 @@ export function BouquetBuilder() {
       | FlowerId
       | undefined
     if (flowerId) setActiveFlowerId(flowerId)
-    const p = activatorClientPoint(event.activatorEvent)
-    if (p) {
-      initialPointerRef.current = p
-      lastPointerRef.current = p
+    if (event.activatorEvent) {
+      const p = getEventCoordinates(event.activatorEvent)
+      if (p) lastPointerRef.current = p
     }
   }
 
   function handleDragMove(event: DragMoveEvent) {
-    const initial = initialPointerRef.current
-    if (!initial) return
+    const origin = getEventCoordinates(event.activatorEvent)
+    if (!origin) return
     lastPointerRef.current = {
-      x: initial.x + event.delta.x,
-      y: initial.y + event.delta.y,
+      x: origin.x + event.delta.x,
+      y: origin.y + event.delta.y,
     }
   }
 
   function clearDragPointerState() {
-    initialPointerRef.current = null
     lastPointerRef.current = null
   }
 
@@ -180,10 +189,10 @@ export function BouquetBuilder() {
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    const initial = initialPointerRef.current
+    const origin = getEventCoordinates(event.activatorEvent)
     const pointer =
-      initial != null
-        ? { x: initial.x + event.delta.x, y: initial.y + event.delta.y }
+      origin != null
+        ? { x: origin.x + event.delta.x, y: origin.y + event.delta.y }
         : lastPointerRef.current
     clearDragPointerState()
     setActiveFlowerId(null)
@@ -215,6 +224,41 @@ export function BouquetBuilder() {
         },
       ]
     })
+  }
+
+  async function handleDownloadPreviewImage() {
+    const node = previewBouquetCaptureRef.current
+    if (!node) return
+    try {
+      const dataUrl = await toPng(node, {
+        pixelRatio: 2,
+        cacheBust: true,
+      })
+      const a = document.createElement('a')
+      a.download = 'tiny-blooms.png'
+      a.href = dataUrl
+      a.rel = 'noopener'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    } catch {
+      /* malformed DOM / unsupported: ignore */
+    }
+  }
+
+  async function handleCopyShareLink() {
+    try {
+      const payload = serializeShareState({
+        wrapperId,
+        bouquet,
+        letterText,
+        letterCardColor,
+      })
+      const url = buildShareUrl(payload)
+      await navigator.clipboard.writeText(url)
+    } catch {
+      /* clipboard / serialization */
+    }
   }
 
   const crossfade = { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const }
@@ -274,6 +318,7 @@ export function BouquetBuilder() {
                     onSelectBloom={setSelectedInstanceId}
                     onMoveBloom={handleMoveBloom}
                     onScaleBloom={handleScaleBloom}
+                    onRotateBloom={handleRotateBloom}
                     onBloomPlacementRef={(el) => {
                       bloomPlacementElRef.current = el
                     }}
@@ -446,6 +491,9 @@ export function BouquetBuilder() {
                 letterCardColor={letterCardColor}
                 onEditMessage={() => setStep('letter')}
                 onEditBouquet={() => setStep('studio')}
+                bouquetCaptureRef={previewBouquetCaptureRef}
+                onDownloadImage={() => void handleDownloadPreviewImage()}
+                onCopyShareLink={handleCopyShareLink}
               />
             </motion.div>
           </motion.div>

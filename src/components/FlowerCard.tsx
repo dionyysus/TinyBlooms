@@ -1,6 +1,8 @@
 import { useDraggable } from '@dnd-kit/core'
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import type { Flower } from '../types/bouquet'
+import { TrimmedFlowerImage } from './TrimmedFlowerImage'
 
 type Props = {
   flower: Flower
@@ -10,6 +12,17 @@ type Props = {
 
 /** Image draggable token for the shelf rail. */
 export function FlowerCard({ flower, preview = false }: Props) {
+  const [shelfHeightPx, setShelfHeightPx] = useState(64)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    function apply() {
+      setShelfHeightPx(mq.matches ? 72 : 64)
+    }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
   const draggable = useDraggable({
     id: `flower-${flower.id}`,
     data: { kind: 'flower', flowerId: flower.id },
@@ -44,11 +57,15 @@ export function FlowerCard({ flower, preview = false }: Props) {
             ].join(' '),
       ].join(' ')}
     >
-      <img
+      <TrimmedFlowerImage
         src={flower.imagePath}
         alt={flower.name}
-        className={preview ? 'h-20 w-auto object-contain drop-shadow-sm' : 'h-16 w-auto object-contain drop-shadow-sm sm:h-[4.5rem]'}
-        draggable={false}
+        displayHeightPx={preview ? 80 : shelfHeightPx}
+        fallbackImgClassName={
+          preview
+            ? 'h-20 w-auto object-contain drop-shadow-sm'
+            : 'h-16 w-auto object-contain drop-shadow-sm sm:h-[4.5rem]'
+        }
       />
     </motion.div>
   )

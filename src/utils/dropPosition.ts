@@ -1,11 +1,8 @@
 /**
  * Converts a viewport pointer position to percentage coordinates inside a
- * placement box (the studio hero), then clamps to a small symmetric edge inset
- * so emoji blooms rarely clip half-off the card edges.
+ * placement box (the studio hero), then clamps to the full 0–100% range so the
+ * entire bloomPlacementEl maps to placement coords (blooms may sit flush at edges).
  */
-
-/** Fraction of width/height to reserve on each edge (~3%). */
-const EDGE_INSET_FRAC = 0.03
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
@@ -16,11 +13,9 @@ export function clampPlacementPercent(
   xPct: number,
   yPct: number,
 ): { xPct: number; yPct: number } {
-  const lo = EDGE_INSET_FRAC * 100
-  const hi = 100 - EDGE_INSET_FRAC * 100
   return {
-    xPct: clamp(xPct, lo, hi),
-    yPct: clamp(yPct, lo, hi),
+    xPct: clamp(xPct, 0, 100),
+    yPct: clamp(yPct, 0, 100),
   }
 }
 
