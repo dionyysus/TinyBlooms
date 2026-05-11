@@ -89,7 +89,7 @@ function BouquetOnlyStack({
               }}
             >
               <TrimmedFlowerImage
-                key={meta.imagePath}
+                key={p.instanceId}
                 src={meta.imagePath}
                 alt={meta.name}
                 displayHeightPx={88}

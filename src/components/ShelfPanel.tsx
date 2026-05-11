@@ -86,7 +86,10 @@ export function ShelfPanel({
                   }}
                   className="flex justify-center"
                 >
-                  <FlowerCard flower={flower} />
+                  <FlowerCard
+                    flower={flower}
+                    fetchPriority={i < 4 ? 'high' : undefined}
+                  />
                 </motion.div>
               ))}
             </motion.div>

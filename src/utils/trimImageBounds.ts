@@ -57,11 +57,10 @@ function loadHtmlImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-async function computeTrimmedImageBounds(
-  src: string,
+function computeTrimmedImageBoundsFromElement(
+  img: HTMLImageElement,
   alphaThreshold: number,
-): Promise<TrimmedImageBoundsResult> {
-  const img = await loadHtmlImage(src)
+): TrimmedImageBoundsResult {
   const iw = img.naturalWidth
   const ih = img.naturalHeight
   const fullBox: TrimmedImageBoundsResult = { x: 0, y: 0, w: iw, h: ih, iw, ih }
@@ -106,6 +105,14 @@ async function computeTrimmedImageBounds(
   }
 }
 
+async function computeTrimmedImageBounds(
+  src: string,
+  alphaThreshold: number,
+): Promise<TrimmedImageBoundsResult> {
+  const img = await loadHtmlImage(src)
+  return computeTrimmedImageBoundsFromElement(img, alphaThreshold)
+}
+
 /**
  * Bounding box of pixels with alpha above the threshold (default 8), relative to natural size.
  * Cached per session by `src` and `alphaThreshold`. On scan failure, returns the full image box.
@@ -122,4 +129,25 @@ export function getTrimmedImageBounds(
   const p = computeTrimmedImageBounds(src, alphaThreshold)
   boundsCache.set(key, p)
   return p
+}
+
+/**
+ * Alpha-trim using the **already-loaded** bitmap from an on-screen `<img>`.
+ * Avoids spawning a second `Image()` fetch/decode for the same URL.
+ */
+export function getTrimmedImageBoundsFromLoadedImage(
+  src: string,
+  img: HTMLImageElement,
+  opts?: { alphaThreshold?: number },
+): Promise<TrimmedImageBoundsResult> {
+  const alphaThreshold = opts?.alphaThreshold ?? DEFAULT_THRESHOLD
+  const key = cacheKey(src, alphaThreshold)
+  const cached = boundsCache.get(key)
+  if (cached) return cached
+
+  const settled = Promise.resolve(
+    computeTrimmedImageBoundsFromElement(img, alphaThreshold),
+  )
+  boundsCache.set(key, settled)
+  return settled
 }

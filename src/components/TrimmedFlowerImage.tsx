@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react'
 import {
-  getTrimmedImageBounds,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type SyntheticEvent,
+} from 'react'
+import {
+  getTrimmedImageBoundsFromLoadedImage,
   type TrimmedImageBoundsResult,
 } from '../utils/trimImageBounds'
 
@@ -29,7 +35,7 @@ function isNontrivialTrim(b: TrimmedImageBoundsResult) {
 
 /**
  * Sizes layout and hit-testing to opaque pixel bounds once trim analysis finishes.
- * Before that, behaves like a normal intrinsic `height` / `width: auto` PNG.
+ * Trim runs on the **same** `<img>` decode as the visible asset (no duplicate fetch).
  */
 export function TrimmedFlowerImage({
   src,
@@ -39,22 +45,29 @@ export function TrimmedFlowerImage({
   wrapperClassName = '',
   fetchPriority,
 }: Props) {
+  const imgRef = useRef<HTMLImageElement>(null)
   const [bounds, setBounds] = useState<TrimmedImageBoundsResult | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        const b = await getTrimmedImageBounds(src)
-        if (!cancelled) setBounds(b)
-      } catch {
-        if (!cancelled) setBounds(null)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
+  const applyTrimFromImage = useCallback((img: HTMLImageElement) => {
+    if (img.naturalWidth < 1) return
+    void getTrimmedImageBoundsFromLoadedImage(src, img)
+      .then(setBounds)
+      .catch(() => setBounds(null))
   }, [src])
+
+  useLayoutEffect(() => {
+    const el = imgRef.current
+    if (el?.complete && el.naturalWidth > 0) {
+      applyTrimFromImage(el)
+    }
+  }, [src, applyTrimFromImage])
+
+  const onLoad = useCallback(
+    (e: SyntheticEvent<HTMLImageElement>) => {
+      applyTrimFromImage(e.currentTarget)
+    },
+    [applyTrimFromImage],
+  )
 
   const cropped =
     bounds &&
@@ -62,44 +75,43 @@ export function TrimmedFlowerImage({
     isNontrivialTrim(bounds) &&
     bounds.h > 1e-6
 
-  if (!cropped || !bounds) {
-    return (
-      <img
-        key={src}
-        src={src}
-        alt={alt}
-        className={fallbackImgClassName}
-        draggable={false}
-        decoding="async"
-        fetchPriority={fetchPriority}
-      />
-    )
-  }
-
-  const s = displayHeightPx / bounds.h
+  const s = cropped && bounds ? displayHeightPx / bounds.h : 0
 
   return (
     <div
-      className={`relative inline-flex shrink-0 overflow-hidden ${wrapperClassName}`}
-      style={{
-        width: bounds.w * s,
-        height: displayHeightPx,
-      }}
+      className={
+        cropped
+          ? `relative inline-flex shrink-0 overflow-hidden ${wrapperClassName}`
+          : `inline-flex shrink-0 ${wrapperClassName}`.trim()
+      }
+      style={
+        cropped && bounds
+          ? { width: bounds.w * s, height: displayHeightPx }
+          : undefined
+      }
     >
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
+        onLoad={onLoad}
         draggable={false}
         decoding="async"
         fetchPriority={fetchPriority}
-        className="pointer-events-none max-w-none select-none"
-        style={{
-          position: 'absolute',
-          left: -bounds.x * s,
-          top: -bounds.y * s,
-          width: bounds.iw * s,
-          height: bounds.ih * s,
-        }}
+        className={
+          cropped ? 'pointer-events-none max-w-none select-none' : fallbackImgClassName
+        }
+        style={
+          cropped && bounds
+            ? {
+                position: 'absolute',
+                left: -bounds.x * s,
+                top: -bounds.y * s,
+                width: bounds.iw * s,
+                height: bounds.ih * s,
+              }
+            : undefined
+        }
       />
     </div>
   )

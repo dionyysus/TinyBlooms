@@ -8,10 +8,11 @@ type Props = {
   flower: Flower
   /** When true: DragOverlay styling — larger image, no dnd refs. */
   preview?: boolean
+  fetchPriority?: 'high' | 'low' | 'auto'
 }
 
 /** Image draggable token for the shelf rail. */
-export function FlowerCard({ flower, preview = false }: Props) {
+export function FlowerCard({ flower, preview = false, fetchPriority }: Props) {
   const [shelfHeightPx, setShelfHeightPx] = useState(64)
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 640px)')
@@ -67,6 +68,7 @@ export function FlowerCard({ flower, preview = false }: Props) {
             ? 'h-20 w-auto object-contain drop-shadow-sm'
             : 'h-16 w-auto object-contain drop-shadow-sm sm:h-[4.5rem]'
         }
+        fetchPriority={fetchPriority}
       />
     </motion.div>
   )
