@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense } from 'react'
 import { getEmbedModeFromLocation } from './utils/shareUrlParams'
 
 const BouquetBuilder = lazy(async () => {
@@ -12,10 +12,7 @@ const EmbedViewer = lazy(async () => {
 })
 
 export default function App() {
-  const openEmbedViewer = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return getEmbedModeFromLocation()
-  }, [])
+  const openEmbedViewer = getEmbedModeFromLocation()
 
   return (
     <Suspense fallback={<AppShellFallback />}>

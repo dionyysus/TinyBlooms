@@ -25,11 +25,14 @@ export function getSharePayloadFromLocation(): string | null {
   }
 }
 
-/** Viewer-only mode: URL has `embed=1` (see `buildShareUrl(..., { embed: true })`). */
+/** Viewer-only mode: `embed` query (see `buildShareUrl(..., { embed: true })`). */
 export function getEmbedModeFromLocation(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    return new URL(window.location.href).searchParams.get('embed') === '1'
+    const v = new URL(window.location.href).searchParams.get('embed')
+    if (v == null) return false
+    const t = v.trim().toLowerCase()
+    return t === '1' || t === 'true' || t === 'yes' || t === 'on'
   } catch {
     return false
   }

@@ -121,8 +121,7 @@ function BouquetOnlyStack({
 }
 
 /**
- * Preview step — stacked layout: envelope peeks under bouquet (interactive).
- * Download: temporary side-by-side artboard (open envelope beside bouquet).
+ * Preview step — stacked layout: interactive envelope above the bouquet (download still side-by-side).
  */
 export function PreviewScene({
   wrapperId,
@@ -223,7 +222,7 @@ export function PreviewScene({
             </div>
           </div>
         ) : (
-          /* Interactive preview: envelope tucked under bouquet */
+          /* Interactive preview: envelope painted above bouquet; size/position unchanged. */
           <div
             className="relative w-full min-w-0"
             style={{
@@ -236,12 +235,23 @@ export function PreviewScene({
             />
 
             <div
+              className="absolute left-0 right-0 top-0 z-[1]"
+              style={{ height: BOUQUET_SCENE_H }}
+            >
+              <BouquetOnlyStack
+                wrapperId={wrapperId}
+                bouquet={bouquet}
+                prioritizeFlowers={embedded}
+              />
+            </div>
+
+            <div
               className="absolute"
               style={{
-                bottom: 85,
+                bottom: 58,
                 left: '50%',
-                transform: 'translateX(calc(-50% + 25px))',
-                zIndex: letterOpen ? 30 : 1,
+                transform: 'translateX(calc(-50% + 48px))',
+                zIndex: letterOpen ? 35 : 25,
                 transition: letterOpen ? 'z-index 0s' : 'z-index 0s 0.3s',
                 cursor: 'pointer',
               }}
@@ -258,17 +268,6 @@ export function PreviewScene({
                   open={letterOpen}
                 />
               </motion.div>
-            </div>
-
-            <div
-              className="absolute left-0 right-0 top-0"
-              style={{ height: BOUQUET_SCENE_H }}
-            >
-              <BouquetOnlyStack
-                wrapperId={wrapperId}
-                bouquet={bouquet}
-                prioritizeFlowers={embedded}
-              />
             </div>
           </div>
         )}

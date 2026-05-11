@@ -31,6 +31,7 @@ import {
   clampPlacementPercent,
   clientToClampedPlacementPercent,
 } from '../utils/dropPosition'
+import { copyTextToClipboard } from '../utils/copyToClipboard'
 import {
   buildShareUrl,
   deserializeShareState,
@@ -317,9 +318,12 @@ export function BouquetBuilder() {
         letterCardColor,
       })
       const url = buildShareUrl(payload, { embed: true })
-      await navigator.clipboard.writeText(url)
+      const copied = await copyTextToClipboard(url)
+      if (!copied) {
+        window.prompt('Copy this link:', url)
+      }
     } catch {
-      /* clipboard / serialization */
+      window.alert('Could not create the share link. Please try again.')
     }
   }
 
